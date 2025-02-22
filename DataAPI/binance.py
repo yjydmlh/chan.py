@@ -1,78 +1,24 @@
-import ssl
 from datetime import datetime
+from typing import Iterable
 
-import ccxt
-import certifi
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3 import poolmanager
+from DataAPI.CommonStockAPI import CCommonStockApi
+from DataAPI.ccxt import GetColumnNameFromFieldList
+from KLine.KLine_Unit import CKLine_Unit
 
 from Common.CEnum import AUTYPE, DATA_FIELD, KL_TYPE
 from Common.CTime import CTime
 from Common.func_util import kltype_lt_day, str2float
-from KLine.KLine_Unit import CKLine_Unit
+import ccxt
 
-from .CommonStockAPI import CCommonStockApi
-
-def create_ssl_context():
-    context = ssl.create_default_context()
-    # 使用 certifi 提供的 CA 文件
-    context.load_verify_locations(certifi.where())
-
-    # 如果有自签 CA，也可以加上:
-    # context.load_verify_locations("path/to/custom_ca.crt")
-
-    # 如果想禁用 TLS 1.0/1.1 之类，也可以在这里改 context.options
-    # ...
-    return context
-
-class CustomSslAdapter(HTTPAdapter):
-    def __init__(self, ssl_context=None, **kwargs):
-        self.ssl_context = ssl_context  # 把传进来的 ssl_context 赋给 self.ssl_context
-        super().__init__(**kwargs)       # 初始化父类 HTTPAdapter
-
-    def init_poolmanager(self, connections, maxsize, block=False, **kwargs):
-        self.poolmanager = poolmanager.PoolManager(
-            num_pools=connections,
-            maxsize=maxsize,
-            block=block,
-            ssl_context=self.ssl_context,  # 这里要和 __init__ 里同名
-            **kwargs
-        )
-
-def create_session_with_ssl_context(context: ssl.SSLContext) -> requests.Session:
-    session = requests.Session()
-    adapter = CustomSslAdapter(ssl_context=context)
-    session.mount("https://", adapter)
-    return session
-
-def GetColumnNameFromFieldList(fileds: str):
-    _dict = {
-        "time": DATA_FIELD.FIELD_TIME,
-        "open": DATA_FIELD.FIELD_OPEN,
-        "high": DATA_FIELD.FIELD_HIGH,
-        "low": DATA_FIELD.FIELD_LOW,
-        "close": DATA_FIELD.FIELD_CLOSE,
-    }
-    return [_dict[x] for x in fileds.split(",")]
-
-
-class CCXT(CCommonStockApi):
+class Binance(CCommonStockApi):
     is_connect = None
 
     def __init__(self, code, k_type=KL_TYPE.K_DAY, begin_date=None, end_date=None, autype=AUTYPE.QFQ):
         super(CCXT, self).__init__(code, k_type, begin_date, end_date, autype)
 
-    def get_kl_data(self):
-        fields = "time,open,high,low,close"
-        ssl_ctx = create_ssl_context()
-        my_session = create_session_with_ssl_context(ssl_ctx)
-        exchange = ccxt.binance({
-            'session': my_session,
-                                 'enableRateLimit': True
-                                    ,'options': {
-                            'defaultType': 'future',  # fapi
-                        } })
+    def get_kl_data(self) -> Iterable[CKLine_Unit]:
+        fields = "time,open,high,low,close,volume"
+        exchange = ccxt.binance()
         timeframe = self.__convert_type()
         since_date = exchange.parse8601(f'{self.begin_date}T00:00:00')
         data = exchange.fetch_ohlcv(self.code, timeframe, since=since_date)
@@ -85,20 +31,34 @@ class CCXT(CCommonStockApi):
                 item[1],
                 item[2],
                 item[3],
-                item[4]
+                item[4],
+                item[5]
             ]
             yield CKLine_Unit(self.create_item_dict(item_data, GetColumnNameFromFieldList(fields)), autofix=True)
 
     def SetBasciInfo(self):
-        pass
+        try:
+            market_info = self.exchange.load_markets()
+            symbol_info = market_info.get(self.code)
+            if symbol_info:
+                self.name = symbol_info.get('symbol')
+                self.is_stock = symbol_info.get('isSpot')  # 假设isSpot表示是否为现货市场
+            else:
+                raise Exception(f"Symbol {self.code} not found on Binance")
+        except Exception as e:
+            print(f"Failed to fetch basic info for {self.code}: {e}")
 
     @classmethod
     def do_init(cls):
-        pass
+        # 初始化连接
+        cls.exchange = ccxt.binance()
+        cls.is_connect = True
 
     @classmethod
     def do_close(cls):
-        pass
+        # 初始化连接
+        cls.exchange = ccxt.binance()
+        cls.is_connect = True
 
     def __convert_type(self):
         _dict = {

@@ -7,11 +7,11 @@ if __name__ == "__main__":
     一个极其弱智的策略，只交易一类买卖点，底分型形成后就开仓，直到一类卖点顶分型形成后平仓
     只用做展示如何自己实现策略，做回测用~
     """
-    code = "sz.000001"
-    begin_time = "2021-01-01"
+    code = "SOL/USDT"
+    begin_time = "2020-01-01"
     end_time = None
-    data_src = DATA_SRC.BAO_STOCK
-    lv_list = [KL_TYPE.K_DAY]
+    data_src = DATA_SRC.CCXT
+    lv_list = [KL_TYPE.K_60M]
 
     config = CChanConfig({
         "trigger_step": True,  # 打开开关！
