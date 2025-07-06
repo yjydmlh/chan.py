@@ -48,6 +48,8 @@ class CBSPointList(Generic[LINE_TYPE, LINE_LIST_TYPE]):
                     if bsp_list[is_buy][-1].bi.get_end_klu().idx <= self.last_sure_pos:
                         break
                     del self.bsp_store_flat_dict[bsp_list[is_buy][-1].bi.idx]
+                    # 同时把失效买卖点从Bi删除
+                    bsp_list[is_buy][-1].bi.bsp = None
                     bsp_list[is_buy].pop()
 
     def clear_bsp1_end(self):
@@ -147,6 +149,8 @@ class CBSPointList(Generic[LINE_TYPE, LINE_LIST_TYPE]):
             return
         if is_target_bsp:
             self.store_add_bsp(bs_type, bsp)
+        else:
+            bsp.bi.bsp = None
         if bs_type in [BSP_TYPE.T1, BSP_TYPE.T1P]:
             self.add_bsp1(bsp)
 
