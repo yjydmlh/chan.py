@@ -19,6 +19,7 @@ class KL_TYPE(Enum):
     K_15M = auto()
     K_30M = auto()
     K_60M = auto()
+    K_4H = auto()
     K_3M = auto()
     K_QUARTER = auto()
 
