@@ -24,11 +24,12 @@ class KL_TYPE(Enum):
     K_15M = 12
     K_30M = 13
     K_60M = 14
-    K_DAY = 15
-    K_WEEK = 16
-    K_MON = 17
-    K_QUARTER = 18
-    K_YEAR = 19
+    K_4H = 15
+    K_DAY = 16
+    K_WEEK = 17
+    K_MON = 18
+    K_QUARTER = 19
+    K_YEAR = 20
 
 
 class KLINE_DIR(Enum):
